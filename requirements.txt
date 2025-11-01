@@ -1,0 +1,5 @@
+qiskit
+streamlit
+plotly
+numpy
+qiskit-aer
