@@ -1,27 +1,36 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister
-from qiskit.quantum_info import Statevector, partial_trace, Operator
+from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister, transpile
+from qiskit.quantum_info import DensityMatrix, partial_trace, Operator, state_fidelity
 from qiskit.circuit.library.standard_gates import XGate, ZGate
-from qiskit_aer import AerSimulator 
+from qiskit_aer import AerSimulator
+from qiskit_aer.noise import NoiseModel, depolarizing_error
 
 PAULI_X = Operator([[0, 1], [1, 0]])
 PAULI_Y = Operator([[0, -1j], [1j, 0]])
 PAULI_Z = Operator([[1, 0], [0, -1]])
 
-def get_bloch_coordinates(statevector, q_index):
-    num_qubits = statevector.num_qubits
+def get_bloch_coordinates(quantum_state, q_index):
+    num_qubits = quantum_state.num_qubits
     qubits_to_trace_out = list(range(num_qubits))
     qubits_to_trace_out.pop(q_index)
     
-    rho_qubit = partial_trace(statevector, qubits_to_trace_out)
+    rho_qubit = partial_trace(quantum_state, qubits_to_trace_out)
     
     x = rho_qubit.expectation_value(PAULI_X).real
     y = rho_qubit.expectation_value(PAULI_Y).real
     z = rho_qubit.expectation_value(PAULI_Z).real
     
     return [x, y, z]
+
+def get_purity(quantum_state, q_index):
+    num_qubits = quantum_state.num_qubits
+    qubits_to_trace_out = list(range(num_qubits))
+    qubits_to_trace_out.pop(q_index)
+    
+    rho_qubit = partial_trace(quantum_state, qubits_to_trace_out)
+    return rho_qubit.purity().real
 
 def create_bloch_sphere(vector, title):
     sphere = go.Surface(
@@ -58,38 +67,65 @@ st.set_page_config(layout="wide")
 st.title("👻 Eídōlon (Phantom): The Teleportation Simulator")
 st.markdown("An interactive 3-step visualization of the 2022 Nobel Prize-winning quantum teleportation protocol.")
 
-st.header(f"1. Create Alice's 'Message' Qubit ($q_0$)")
-theta_input = st.slider(
-    "Set the superposition angle (θ):",
-    min_value=0.0,
-    max_value=np.pi,
-    value=np.pi / 2,
-    format="%.2f rad"
-)
-st.latex(rf"|\psi\rangle = \cos({theta_input/2:.2f})|0\rangle + \sin({theta_input/2:.2f})|1\rangle")
+col_a, col_b = st.columns(2)
+with col_a:
+    st.header(f"1. Create Alice's 'Message' Qubit ($q_0$)")
+    theta_input = st.slider(
+        "Set the superposition angle (θ):",
+        min_value=0.0,
+        max_value=np.pi,
+        value=np.pi / 2,
+        format="%.2f rad"
+    )
+    st.latex(rf"|\psi\rangle = \cos({theta_input/2:.2f})|0\rangle + \sin({theta_input/2:.2f})|1\rangle")
+with col_b:
+    st.header("2. Set Simulation Noise")
+    noise_level = st.slider(
+        "Set 2-Qubit Gate Error Rate (Depolarizing Noise):",
+        min_value=0.0,
+        max_value=0.1, 
+        value=0.0, 
+        format="%.2f%%"
+    )
+    st.markdown("This error is applied to all `cx` and `swap` gates.")
+
+coupling_map = [[0, 1], [1, 0], [0, 2], [2, 0]]
+basis_gates = ['id', 'rz', 'sx', 'x', 'cx', 'swap'] 
+
+noise_model = NoiseModel()
+if noise_level > 0:
+    error = depolarizing_error(noise_level, 2)
+    noise_model.add_all_qubit_quantum_error(error, ['cx', 'swap'])
+
+simulator = AerSimulator(noise_model=noise_model)
 
 st.divider()
-
-st.header("2. The Simulation")
+st.header("3. The Simulation")
 st.markdown("Follow the state of the three qubits from left to right.")
 
 col1, col2, col3 = st.columns(3)
+
+ideal_rho_q0 = None
 
 with col1:
     st.subheader("Step 1: Initial State")
     
     before_qc = QuantumCircuit(3)
     before_qc.ry(theta_input, 0)
-    before_sv = Statevector(before_qc)
+    before_dm = DensityMatrix(before_qc)
     
-    q0_coords = get_bloch_coordinates(before_sv, 0)
-    q1_coords = get_bloch_coordinates(before_sv, 1)
-    q2_coords = get_bloch_coordinates(before_sv, 2)
+    q0_coords = get_bloch_coordinates(before_dm, 0)
+    q1_coords = get_bloch_coordinates(before_dm, 1)
+    q2_coords = get_bloch_coordinates(before_dm, 2)
+    
+    ideal_rho_q0 = partial_trace(before_dm, [1, 2])
     
     st.plotly_chart(create_bloch_sphere(q0_coords, "q₀ (Alice's Message)"), width='stretch')
+    st.metric("Purity", f"{get_purity(before_dm, 0):.3f}")
     st.plotly_chart(create_bloch_sphere(q1_coords, "q₁ (Alice's Link)"), width='stretch')
+    st.metric("Purity", f"{get_purity(before_dm, 1):.3f}")
     st.plotly_chart(create_bloch_sphere(q2_coords, "q₂ (Bob's Qubit)"), width='stretch')
-    st.caption("Alice has her message ($q_0$). $q_1$ and $q_2$ are blank.")
+    st.metric("Purity", f"{get_purity(before_dm, 2):.3f}")
 
 with col2:
     st.subheader("Step 2: Just Before Measurement")
@@ -97,22 +133,28 @@ with col2:
     mid_qc = QuantumCircuit(3, 2)
     mid_qc.ry(theta_input, 0)
     mid_qc.h(1)
-    mid_qc.cx(1, 2)
+    mid_qc.cx(1, 2) 
     mid_qc.barrier()
     mid_qc.cx(0, 1)
     mid_qc.h(0)
     mid_qc.barrier()
     
-    mid_sv = Statevector(mid_qc)
+    transpiled_mid_qc = transpile(mid_qc, coupling_map=coupling_map, basis_gates=basis_gates)
+    transpiled_mid_qc.save_density_matrix(label="mid_dm")
     
-    q0_coords = get_bloch_coordinates(mid_sv, 0)
-    q1_coords = get_bloch_coordinates(mid_sv, 1)
-    q2_coords = get_bloch_coordinates(mid_sv, 2)
+    result_mid = simulator.run(transpiled_mid_qc).result()
+    mid_dm = result_mid.data()["mid_dm"]
+    
+    q0_coords = get_bloch_coordinates(mid_dm, 0)
+    q1_coords = get_bloch_coordinates(mid_dm, 1)
+    q2_coords = get_bloch_coordinates(mid_dm, 2)
     
     st.plotly_chart(create_bloch_sphere(q0_coords, "q₀ (Entangled)"), width='stretch')
+    st.metric("Purity", f"{get_purity(mid_dm, 0):.3f}")
     st.plotly_chart(create_bloch_sphere(q1_coords, "q₁ (Entangled)"), width='stretch')
+    st.metric("Purity", f"{get_purity(mid_dm, 1):.3f}")
     st.plotly_chart(create_bloch_sphere(q2_coords, "q₂ (Broken State)"), width='stretch')
-    st.caption("Alice performs her operations, entangling all 3 qubits. The states of $q_0$ and $q_1$ are now 'destroyed' (mixed) and $q_2$ is in a 'broken' state.")
+    st.metric("Purity", f"{get_purity(mid_dm, 2):.3f}")
 
 with col3:
     st.subheader("Step 3: Bob Corrects")
@@ -129,35 +171,39 @@ with col3:
     after_qc.cx(0, 1)
     after_qc.h(0)
     after_qc.barrier()
-    
-    after_qc.measure([0, 1], [1, 0])
+    after_qc.measure([0, 1], [0, 1])
     after_qc.barrier()
-
-    
     with after_qc.if_test((cr_x, 1)) as else_:
         after_qc.x(2)
     with after_qc.if_test((cr_z, 1)) as else_:
         after_qc.z(2)
     
-    
+    transpiled_after_qc = transpile(after_qc, coupling_map=coupling_map, basis_gates=basis_gates)
+    transpiled_after_qc.save_density_matrix(label="final_dm")
 
-    after_qc.save_statevector()
+    result_final = simulator.run(transpiled_after_qc).result()
+    final_dm = result_final.data()["final_dm"]
     
-    simulator = AerSimulator()
-    result = simulator.run(after_qc).result()
-    final_sv = result.get_statevector()
+    q0_coords = get_bloch_coordinates(final_dm, 0)
+    q1_coords = get_bloch_coordinates(final_dm, 1)
+    q2_coords = get_bloch_coordinates(final_dm, 2)
     
-    
-    q0_coords = get_bloch_coordinates(final_sv, 0)
-    q1_coords = get_bloch_coordinates(final_sv, 1)
-    q2_coords = get_bloch_coordinates(final_sv, 2)
+    final_rho_q2 = partial_trace(final_dm, [0, 1])
+    fidelity = state_fidelity(ideal_rho_q0, final_rho_q2)
 
     st.plotly_chart(create_bloch_sphere(q0_coords, "q₀ (Collapsed)"), width='stretch')
+    st.metric("Purity", f"{get_purity(final_dm, 0):.3f}")
     st.plotly_chart(create_bloch_sphere(q1_coords, "q₁ (Collapsed)"), width='stretch')
-    st.plotly_chart(create_bloch_sphere(q2_coords, "q₂ (Teleported State)"), width='stretch')
-    st.caption("Bob gets Alice's 2 classical bits, applies his correction, and recovers the original message. Teleportation complete!")
+    st.metric("Purity", f"{get_purity(final_dm, 1):.3f}")
     
+    st.plotly_chart(create_bloch_sphere(q2_coords, "q₂ (Teleported State)"), width='stretch')
+    st.metric("Purity", f"{get_purity(final_dm, 2):.3f}")
+    st.metric("Fidelity", f"{fidelity:.3f}")
+
 st.divider()
-st.header("3. The Full Quantum Circuit")
-st.text("This is the complete Qiskit circuit that runs in 'Step 3'.")
+st.header("4. The Full Quantum Circuit")
+st.text("This is the 'ideal' circuit we designed:")
 st.text(after_qc.draw(output='text'))
+
+st.text("This is the 'real' circuit the transpiler runs on the hardware (notice the new 'swap' gates):")
+st.text(transpiled_after_qc.draw(output='text'))
