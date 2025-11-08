@@ -4,3 +4,4 @@ plotly
 numpy
 qiskit-aer
 pylatexenc
+matplotlib
