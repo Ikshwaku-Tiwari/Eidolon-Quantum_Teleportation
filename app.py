@@ -65,7 +65,7 @@ def create_bloch_sphere(vector, title):
     return fig
 
 st.set_page_config(layout="wide")
-st.title("👻 Eídōlon (The Phantom)")
+st.title("Eídōlon (The Phantom)")
 st.markdown("An interactive 3-step visualization of the 2022 Nobel Prize-winning quantum teleportation protocol.")
 
 col_a, col_b = st.columns(2)
