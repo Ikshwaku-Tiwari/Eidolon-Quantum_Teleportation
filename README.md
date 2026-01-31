@@ -9,7 +9,7 @@
 
 <p align="center">
   From the 2022 Nobel Prize to Molecular Quantum Chemistry<br/>
-  <strong>Heidelberg Master's Research Portfolio • 2026</strong>
+  <strong>Master's Research Portfolio • 2026</strong>
 </p>
 
 ---
@@ -100,7 +100,7 @@ def loss_fn(params, batch):
 ```
 
 ---
-
+### Medium Article : https://medium.com/@it.2602.trans/the-journey-of-a-complex-luthier-9d04226d7cf0
 ### Phase 4/5: Molecular Symphony — *LiH Hamiltonian Analysis*
 **Objective**: Extract and optimize molecular Hamiltonians for VQE
 
@@ -232,3 +232,4 @@ Eidolon/
 </p>
 
 Status: Researching Phase 4 & 5. Code private during optimization.
+
