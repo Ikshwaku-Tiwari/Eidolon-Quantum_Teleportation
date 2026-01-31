@@ -227,6 +227,8 @@ Eidolon/
 ---
 
 <p align="center">
-  <em>Developed for Heidelberg University Master's Research</em><br/>
+  <em>Developed for Research</em><br/>
   <strong>Ikshwaku Tiwari • 2026</strong>
 </p>
+
+Status: Researching Phase 4 & 5. Code private during optimization.
