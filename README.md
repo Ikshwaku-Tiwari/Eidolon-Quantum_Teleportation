@@ -181,7 +181,8 @@ for epoch in range(1001):
 
 The molecular electronic Hamiltonian in second quantization:
 
-$$\hat{H} = \sum_{pq} h_{pq} \hat{a}_p^\dagger \hat{a}_q + \frac{1}{2} \sum_{pqrs} g_{pqrs} \hat{a}_p^\dagger \hat{a}_q^\dagger \hat{a}_r \hat{a}_s$$
+```math
+\hat{H} = \sum_{pq} h_{pq} \hat{a}_p^\dagger \hat{a}_q + \frac{1}{2} \sum_{pqrs} g_{pqrs} \hat{a}_p^\dagger \hat{a}_q^\dagger \hat{a}_r \hat{a}_s
 
 Where:
 - $h_{pq}$ — One-electron integrals (kinetic + nuclear attraction)
@@ -311,4 +312,5 @@ Eidolon/
   <img src="https://img.shields.io/badge/Status-Phase%204%20Active-blue?style=flat-square" alt="Status"/>
   <img src="https://img.shields.io/badge/Code-Private%20During%20Optimization-lightgrey?style=flat-square" alt="Code Status"/>
 </p>
+
 
