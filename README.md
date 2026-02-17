@@ -10,11 +10,10 @@
 
 <p align="center">
   From the 2022 Nobel Prize to Molecular Quantum Chemistry<br/>
-  <strong>Heidelberg Master's Research Portfolio • 2026</strong>
+  <strong>Part Of Independent Research Portfolio • 2026</strong>
 </p>
 
 <p align="center">
-  <a href="https://eidolon.streamlit.app/">🌐 Live Demo</a> •
   <a href="#-project-phases">📖 Phases</a> •
   <a href="#%EF%B8%8F-technical-appendix">🛠️ Setup</a> •
   <a href="#-research-roadmap">🎯 Roadmap</a>
@@ -168,6 +167,7 @@ for epoch in range(1001):
 | **Final Loss** | 0.001399 | 0.000278 |
 | **Quantum Fidelity** | 0.9820 | **0.9991** |
 
+## Medium Article on Phase 3: https://medium.com/@it.2602.trans/the-journey-of-a-complex-luthier-9d04226d7cf0
 </details>
 
 ---
@@ -311,3 +311,4 @@ Eidolon/
   <img src="https://img.shields.io/badge/Status-Phase%204%20Active-blue?style=flat-square" alt="Status"/>
   <img src="https://img.shields.io/badge/Code-Private%20During%20Optimization-lightgrey?style=flat-square" alt="Code Status"/>
 </p>
+
