@@ -186,9 +186,10 @@ $$
 $$
 
 Where:
-- $h_{pq}$ — One-electron integrals (kinetic + nuclear attraction)
-- $g_{pqrs}$ — Two-electron repulsion integrals
-- $\hat{a}^{\dagger}, \hat{a}$ — Fermionic creation/annihilation operators
+
+- **h_pq** — One-electron integrals (kinetic + nuclear attraction)
+- **g_pqrs** — Two-electron repulsion integrals
+- **a†, a** — Fermionic creation/annihilation operators
 
 #### Fermion-to-Qubit Mapping Comparison
 
@@ -203,14 +204,10 @@ Where:
 
 #### Z2 Symmetry Tapering
 
-Exploiting $\mathbb{Z}_2$ symmetries of the molecular Hamiltonian reduces qubit requirements:
+Exploiting **Z₂** symmetries of the molecular Hamiltonian reduces qubit requirements:
 
-```
-Original:  12 qubits → 2^12 = 4,096 dimensions
-Tapered:    8 qubits → 2^8  =   256 dimensions
-                       ─────────────────────────
-                       16× dimension reduction
-```
+Original: 12 qubits → 2^12 = 4,096 dimensions Tapered: 8 qubits → 2^8 = 256 dimensions - 16× dimension reduction
+
 
 **Hardware Advantage for Phase 5**:
 - ✅ 8-qubit system fits entirely in CPU cache
@@ -221,7 +218,9 @@ Tapered:    8 qubits → 2^8  =   256 dimensions
 
 All quantum operations must preserve state norm:
 
-$$\hat{U}^\dagger \hat{U} = \hat{U} \hat{U}^\dagger = \hat{I}$$
+$$
+\hat{U}^{\dagger} \hat{U} = \hat{U} \hat{U}^{\dagger} = \hat{I}
+$$
 
 This constraint guides our variational ansatz design in Phase 5.
 
@@ -313,6 +312,7 @@ Eidolon/
   <img src="https://img.shields.io/badge/Status-Phase%204%20Active-blue?style=flat-square" alt="Status"/>
   <img src="https://img.shields.io/badge/Code-Private%20During%20Optimization-lightgrey?style=flat-square" alt="Code Status"/>
 </p>
+
 
 
 
