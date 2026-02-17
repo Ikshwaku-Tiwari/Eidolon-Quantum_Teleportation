@@ -1,5 +1,7 @@
 import streamlit as st
 import numpy as np
+import io
+import base64
 import plotly.graph_objects as go
 from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister, transpile
 from qiskit.quantum_info import DensityMatrix, partial_trace, Operator, state_fidelity
@@ -219,9 +221,33 @@ with col3:
     
     st.caption("Eurydice gets Orpheus's 2 classical bits, applies her correction, and recovers the original message. Teleportation complete!")
 
+
 st.divider()
 st.header("4. The Full Quantum Circuit")
-st.markdown("This is the 'ideal' circuit. It's clean and simple.")
+
+st.markdown(
+    """
+    <style>
+    .hw-circuit-scroll {
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        padding: 0.75rem;
+        border: 1px solid #333;
+        border-radius: 8px;
+        background: #0e1117;
+    }
+    .hw-circuit-scroll img {
+        height: auto;
+        max-height: 500px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown("### Ideal (Textbook) Circuit")
+st.markdown("This is the clean, logical circuit — no hardware constraints.")
 
 display_qc = QuantumCircuit(QuantumRegister(3, "q"), ClassicalRegister(2, "c"))
 display_qc.u(theta_input, phi_input, 0, 0)
@@ -238,22 +264,66 @@ with display_qc.if_test((display_qc.cregs[0][1], 1)):
 with display_qc.if_test((display_qc.cregs[0][0], 1)):
     display_qc.z(2)
 
-fig_ideal, ax_ideal = plt.subplots(figsize=(12, 4))
-display_qc.draw(output='mpl', ax=ax_ideal, fold=-1)
-st.pyplot(fig_ideal)
+fig_ideal, ax_ideal = plt.subplots(figsize=(14, 4))
+display_qc.draw(output='mpl', ax=ax_ideal, fold=-1, idle_wires=False)
+st.pyplot(fig_ideal, width='stretch')
+plt.close(fig_ideal)
 
 st.markdown("---")
-st.markdown("This is the 'real' circuit the transpiler runs on the hardware. **Notice the 'swap' gates** added to manage the bad hardware layout.")
+st.markdown("### Real Hardware Circuit")
+st.markdown(
+    "This is exactly what the transpiler compiles for a **linear 3-qubit chain** "
+    "(`q₀─q₁─q₂`). **Notice the SWAP gates** inserted because `q₀` and `q₂` "
+    "are not directly connected. The `if_test` conditional corrections are "
+    "preserved on the hardware timeline."
+)
 
-display_for_transpile = QuantumCircuit(3)
-display_for_transpile.u(theta_input, phi_input, 0, 0)
-display_for_transpile.h(1)
-display_for_transpile.cx(1, 2)
-display_for_transpile.cx(0, 1)
-display_for_transpile.h(0)
+qr_hw = QuantumRegister(3, "q")
+cr_hw = ClassicalRegister(2, "c")
+full_hw_qc = QuantumCircuit(qr_hw, cr_hw)
 
-transpiled_display_qc = transpile(display_for_transpile, coupling_map=coupling_map, basis_gates=basis_gates, optimization_level=0)
+full_hw_qc.u(theta_input, phi_input, 0, 0)
 
-fig_real, ax_real = plt.subplots(figsize=(14, 4))
-transpiled_display_qc.draw(output='mpl', ax=ax_real, idle_wires=False, fold=-1)
-st.pyplot(fig_real)
+full_hw_qc.h(1)
+full_hw_qc.cx(1, 2)
+full_hw_qc.barrier()
+
+full_hw_qc.cx(0, 1)
+full_hw_qc.h(0)
+full_hw_qc.barrier()
+
+full_hw_qc.measure([0, 1], [0, 1])
+full_hw_qc.barrier()
+
+with full_hw_qc.if_test((cr_hw[1], 1)):
+    full_hw_qc.x(2)
+with full_hw_qc.if_test((cr_hw[0], 1)):
+    full_hw_qc.z(2)
+
+transpiled_display_qc = transpile(
+    full_hw_qc,
+    coupling_map=coupling_map,
+    basis_gates=basis_gates,
+    optimization_level=0,
+)
+
+fig_real, ax_real = plt.subplots(figsize=(28, 5))
+transpiled_display_qc.draw(
+    output='mpl',
+    ax=ax_real,
+    idle_wires=False,
+    fold=-1,
+)
+
+buf = io.BytesIO()
+fig_real.savefig(buf, format="png", bbox_inches="tight", dpi=150)
+plt.close(fig_real)
+buf.seek(0)
+img_b64 = base64.b64encode(buf.read()).decode()
+
+st.markdown(
+    f'<div class="hw-circuit-scroll">'
+    f'<img src="data:image/png;base64,{img_b64}"/>'
+    f'</div>',
+    unsafe_allow_html=True,
+)
