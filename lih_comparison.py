@@ -8,8 +8,8 @@ Compares second-quantized Hamiltonians of Lithium Hydride (LiH) using
 Jordan-Wigner and Bravyi-Kitaev fermion-to-qubit mappings, with Z2
 symmetry-based qubit tapering for circuit depth reduction.
 
-Author: Research Team
-Date: 2026-01-29
+Author: Ikshwaku Tiwari
+Date: 2026-01-27
 """
 
 from __future__ import annotations
@@ -17,7 +17,6 @@ from __future__ import annotations
 import pickle
 from typing import Tuple, Dict, Any, List
 
-# Configure JAX for CPU-only operation BEFORE importing JAX
 import jax
 
 jax.config.update("jax_platforms", "cpu")
@@ -27,32 +26,20 @@ import numpy as np
 import pennylane as qml
 from pennylane import qchem
 
-# =============================================================================
-# Configuration
-# =============================================================================
-
-# LiH molecular geometry (Angstroms)
 SYMBOLS = ["Li", "H"]
 GEOMETRY = np.array(
     [
-        [0.0, 0.0, 0.0],  # Lithium at origin
-        [0.0, 0.0, 1.59],  # Hydrogen at equilibrium bond length
+        [0.0, 0.0, 0.0],
+        [0.0, 0.0, 1.59],
     ]
 )
 
-# Quantum chemistry parameters
 BASIS_SET = "sto-3g"
 CHARGE = 0
-MULTIPLICITY = 1  # Singlet state
-ELECTRONS = 4  # Neutral LiH: Li(3) + H(1)
+MULTIPLICITY = 1
+ELECTRONS = 4
 
-# Supported fermion-to-qubit mappings
 SUPPORTED_MAPPINGS = ["jordan_wigner", "bravyi_kitaev"]
-
-
-# =============================================================================
-# Core Functions
-# =============================================================================
 
 
 def build_molecular_hamiltonian(
@@ -130,11 +117,6 @@ def get_max_pauli_weight(hamiltonian) -> int:
     return max(get_pauli_weight(term) for term in ops)
 
 
-# =============================================================================
-# Z2 Symmetry Tapering Functions
-# =============================================================================
-
-
 def get_symmetry_generators(hamiltonian) -> List:
     """
     Find Z2 symmetry generators of the Hamiltonian.
@@ -161,13 +143,10 @@ def get_optimal_sector(generators: List, n_electrons: int, n_qubits: int) -> Lis
     Returns:
         List of eigenvalues (+1 or -1) defining the sector
     """
-    # Create HF state for optimal sector detection
     hf_state = qml.qchem.hf_state(n_electrons, n_qubits)
 
-    # Find paulixops for each generator
     paulixops = qml.paulix_ops(generators, n_qubits)
 
-    # Get optimal sector
     sector = qml.qchem.optimal_sector(
         hamiltonian=None, generators=generators, active_electrons=n_electrons
     )
@@ -204,18 +183,14 @@ def analyze_hamiltonian_with_tapering(mapping: str) -> Dict[str, Any]:
     Returns:
         Dictionary containing analysis results
     """
-    # Build original Hamiltonian
     hamiltonian, n_qubits = build_molecular_hamiltonian(mapping)
 
-    # Original metrics
     original_terms = count_pauli_terms(hamiltonian)
     original_max_weight = get_max_pauli_weight(hamiltonian)
 
-    # Z2 Symmetry Analysis
     generators = get_symmetry_generators(hamiltonian)
     n_symmetries = len(generators)
 
-    # Tapering
     tapered_h = None
     tapered_qubits = n_qubits
     tapered_terms = original_terms
@@ -223,17 +198,13 @@ def analyze_hamiltonian_with_tapering(mapping: str) -> Dict[str, Any]:
 
     if n_symmetries > 0:
         try:
-            # Get paulix operators and optimal sector
             paulixops = qml.paulix_ops(generators, n_qubits)
 
-            # Get optimal sector using HF state
             hf_state = qml.qchem.hf_state(ELECTRONS, n_qubits)
             sector = qml.qchem.optimal_sector(hamiltonian, generators, ELECTRONS)
 
-            # Apply tapering
             tapered_h = qml.taper(hamiltonian, generators, paulixops, sector)
 
-            # Tapered metrics
             tapered_qubits = n_qubits - n_symmetries
             tapered_terms = count_pauli_terms(tapered_h)
             tapered_max_weight = get_max_pauli_weight(tapered_h)
@@ -241,7 +212,6 @@ def analyze_hamiltonian_with_tapering(mapping: str) -> Dict[str, Any]:
         except Exception as e:
             print(f"   ⚠ Tapering warning: {e}")
 
-    # Use JAX arrays for coefficient operations
     coefficients = jnp.array([float(c) for c in hamiltonian.coeffs])
 
     return {
@@ -279,7 +249,6 @@ def print_comparison_table(results: Dict[str, Dict[str, Any]]) -> None:
     jw = results["jordan_wigner"]
     bk = results["bravyi_kitaev"]
 
-    # Original metrics
     print(f"{'Original Qubits':<35} {jw['n_qubits']:>18} {bk['n_qubits']:>18}")
     print(f"{'Original Pauli Terms':<35} {jw['n_terms']:>18} {bk['n_terms']:>18}")
     print(
@@ -287,13 +256,11 @@ def print_comparison_table(results: Dict[str, Dict[str, Any]]) -> None:
     )
     print("-" * 75)
 
-    # Symmetry info
     print(
         f"{'Z2 Symmetries Found':<35} {jw['n_symmetries']:>18} {bk['n_symmetries']:>18}"
     )
     print("-" * 75)
 
-    # Tapered metrics
     print(
         f"{'Tapered Qubits':<35} {jw['tapered_qubits']:>18} {bk['tapered_qubits']:>18}"
     )
@@ -305,7 +272,6 @@ def print_comparison_table(results: Dict[str, Dict[str, Any]]) -> None:
     )
     print("=" * 75)
 
-    # Qubit reduction summary
     jw_reduction = jw["n_qubits"] - jw["tapered_qubits"]
     bk_reduction = bk["n_qubits"] - bk["tapered_qubits"]
     print(f"{'Qubits Reduced':<35} {jw_reduction:>18} {bk_reduction:>18}")
@@ -341,11 +307,6 @@ def print_hardware_advantage(results: Dict[str, Dict[str, Any]]) -> None:
         print("      → Real-time variational optimization on Intel Iris Xe")
 
 
-# =============================================================================
-# Main Execution
-# =============================================================================
-
-
 def main():
     """Main entry point for LiH Hamiltonian comparison with Z2 tapering."""
     print("\n" + "╔" + "═" * 73 + "╗")
@@ -376,7 +337,6 @@ def main():
     print_comparison_table(results)
     print_hardware_advantage(results)
 
-    # Save tapered Bravyi-Kitaev Hamiltonian
     bk_tapered = results["bravyi_kitaev"]["tapered_hamiltonian"]
     if bk_tapered is not None:
         save_tapered_hamiltonian(bk_tapered, "lih_h_tapered_bk.pkl")

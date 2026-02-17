@@ -1,15 +1,23 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/Quantum-Research-blueviolet?style=for-the-badge" alt="Quantum Research"/>
+  <img src="https://img.shields.io/badge/Quantum-Research-blueviolet?style=for-the-badge&logo=atom&logoColor=white" alt="Quantum Research"/>
+  <img src="https://img.shields.io/badge/PyTorch-CVNN%20Oracle-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch"/>
   <img src="https://img.shields.io/badge/JAX-CPU%20Optimized-orange?style=for-the-badge" alt="JAX CPU"/>
   <img src="https://img.shields.io/badge/PennyLane-Quantum%20Chemistry-green?style=for-the-badge" alt="PennyLane"/>
 </p>
 
-<h1 align="center">Eídōlon</h1>
+<h1 align="center">⚛️ Eídōlon ⚛️</h1>
 <h3 align="center"><em>The Phantom — A Journey Through Quantum Information</em></h3>
 
 <p align="center">
   From the 2022 Nobel Prize to Molecular Quantum Chemistry<br/>
   <strong>Heidelberg Master's Research Portfolio • 2026</strong>
+</p>
+
+<p align="center">
+  <a href="https://eidolon.streamlit.app/">🌐 Live Demo</a> •
+  <a href="#-project-phases">📖 Phases</a> •
+  <a href="#%EF%B8%8F-technical-appendix">🛠️ Setup</a> •
+  <a href="#-research-roadmap">🎯 Roadmap</a>
 </p>
 
 ---
@@ -24,7 +32,9 @@
 
 ## 🏛️ Project Phases
 
-### Phase 1: Quantum Teleportation — *The Orpheus Protocol*
+<details open>
+<summary><h3>🔮 Phase 1: Quantum Teleportation — <em>The Orpheus Protocol</em></h3></summary>
+
 **Nobel Foundation: 2022 Physics Prize (Aspect, Clauser, Zeilinger)**
 
 The foundational demonstration of quantum entanglement and teleportation, visualized through the myth of Orpheus and Eurydice.
@@ -51,9 +61,13 @@ qc.measure([0,1]) # Bell measurement
 
 🔗 **Live Demo**: [eidolon.streamlit.app](https://eidolon.streamlit.app/)
 
+</details>
+
 ---
 
-### Phase 2: Hardware Stress Testing — *Star Graph Topology*
+<details open>
+<summary><h3>🖧 Phase 2: Hardware Stress Testing — <em>Star Graph Topology</em></h3></summary>
+
 **Objective**: Benchmark transpilation under constrained qubit connectivity
 
 #### The Challenge
@@ -77,31 +91,90 @@ Real quantum hardware has limited qubit connectivity. We simulate a **Star Graph
 
 ![Benchmark Plot](benchmark_plot.png)
 
+</details>
+
 ---
 
-### Phase 3: The CVNN Oracle — *The Luthier's Craft*
-**Objective**: Train a Complex-Valued Neural Network to predict quantum observables
+<details open>
+<summary><h3>🧠 Phase 3: The CVNN Oracle — <em>The Luthier's Craft</em></h3></summary>
+
+**Objective**: Train a Complex-Valued Neural Network to predict quantum spin dynamics with higher fidelity than a real-valued baseline
 
 #### The Luthier Analogy
-> *Like a master luthier who learns to predict how wood grain affects violin resonance, our CVNN learns to predict how Hamiltonian structure affects ground state energy.*
+> *Like a master luthier who learns to predict how wood grain affects violin resonance, our CVNN learns to predict how quantum spin states evolve under Larmor precession — capturing the full complex structure that a real-valued network can only approximate.*
+
+#### The Physics: Larmor Precession
+The notebook simulates a spin-½ particle precessing in a magnetic field. The spinor state evolves as:
+
+$$|\psi(t)\rangle = \cos\left(\frac{\omega t}{2}\right)|0\rangle - i\sin\left(\frac{\omega t}{2}\right)|1\rangle$$
+
+where $\omega = 2.0$ is the Larmor frequency. This is an inherently **complex-valued** problem — the ideal test case for a CVNN.
 
 #### Architecture
-- **Framework**: JAX + Equinox (pure functional, JIT-compiled)
-- **Input**: Complex Hamiltonian coefficients
-- **Output**: Predicted ground state energy
-- **Achieved Fidelity**: **0.999** on validation set
 
-```python
-# Oracle_CVNN.ipynb - Core training loop
-@jax.jit
-def loss_fn(params, batch):
-    pred = cvnn_forward(params, batch.hamiltonian)
-    return jnp.mean((pred - batch.energy) ** 2)
+| Component | Specification |
+|-----------|--------------|
+| **Framework** | PyTorch (native complex tensor support) |
+| **Input** | Time parameter $t$, cast to complex: $t + 0i$ |
+| **Output** | Predicted spinor $[\alpha, \beta] \in \mathbb{C}^2$, norm-preserved |
+| **Activation** | `complex_crelu` — applies ReLU independently to real & imaginary parts |
+| **Normalization** | Output divided by $\sqrt{\sum |\text{out}|^2}$ to enforce unitarity |
+
 ```
+Input (t ∈ ℂ¹)
+     │
+     ▼
+┌─────────────┐
+│ ComplexLinear│  1 → 64 complex neurons
+│   + CReLU   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│ ComplexLinear│  64 → 64 complex neurons
+│   + CReLU   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│ ComplexLinear│  64 → 2 complex outputs
+│  + Normalize │
+└──────┬──────┘
+       │
+       ▼
+Output (ψ ∈ ℂ²)
+```
+
+#### Core Training Loop
+```python
+# Oracle_CVNN.ipynb — PyTorch Complex-Valued Training Loop
+model_cvnn = PyTorchComplexOracle()
+optimizer = torch.optim.Adam(model_cvnn.parameters(), lr=0.005)
+
+for epoch in range(1001):
+    optimizer.zero_grad()
+    preds = model_cvnn(X_complex_t)
+    loss = torch.mean(torch.abs(preds - y_complex_t)**2)
+    loss.backward()
+    optimizer.step()
+```
+
+#### Results: RVNN vs CVNN
+
+| Metric | Baseline RVNN | CVNN Oracle |
+|--------|:-------------:|:-----------:|
+| **Architecture** | 3-layer real MLP (1→32→32→4) | 3-layer complex MLP (1→64→64→2) |
+| **Loss Function** | MSE on real components | MSE on complex amplitudes |
+| **Final Loss** | 0.001399 | 0.000278 |
+| **Quantum Fidelity** | 0.9820 | **0.9991** |
+
+</details>
 
 ---
 
-### Phase 4/5: Molecular Symphony — *LiH Hamiltonian Analysis*
+<details open>
+<summary><h3>🧪 Phase 4/5: Molecular Symphony — <em>LiH Hamiltonian Analysis</em></h3></summary>
+
 **Objective**: Extract and optimize molecular Hamiltonians for VQE
 
 #### The Second-Quantized Hamiltonian
@@ -150,6 +223,8 @@ $$\hat{U}^\dagger \hat{U} = \hat{U} \hat{U}^\dagger = \hat{I}$$
 
 This constraint guides our variational ansatz design in Phase 5.
 
+</details>
+
 ---
 
 ## 🛠️ Technical Appendix
@@ -161,19 +236,23 @@ This constraint guides our variational ansatz design in Phase 5.
 conda create -n sym_quantum python=3.9 -y
 conda activate sym_quantum
 
-# 2. Install JAX (CPU-only for Intel Iris Xe)
+# 2. Install PyTorch (for CVNN Oracle — Phase 3)
+pip install torch torchvision
+
+# 3. Install JAX (CPU-only for Intel Iris Xe)
 pip install jax jaxlib
 
-# 3. Install Quantum Stack
+# 4. Install Quantum Stack
 pip install pennylane pennylane-qchem pyscf
 
-# 4. Install ML Stack
-pip install equinox optax
+# 5. Install ML Stack
+pip install equinox optax scikit-learn
 
-# 5. Install Visualization
-pip install streamlit plotly qiskit qiskit-aer
+# 6. Install Visualization
+pip install streamlit plotly qiskit qiskit-aer matplotlib
 
-# 6. Verify Installation
+# 7. Verify Installation
+python -c "import torch; print(f'PyTorch: {torch.__version__}')"
 python -c "import jax; print(f'JAX backend: {jax.default_backend()}')"
 ```
 
@@ -194,7 +273,7 @@ python3 lih_comparison.py
 Eidolon/
 ├── app.py                    # Phase 1: Streamlit teleportation demo
 ├── benchmark.py              # Phase 2: Hardware stress testing
-├── Oracle_CVNN.ipynb         # Phase 3: CVNN training notebook
+├── Oracle_CVNN.ipynb         # Phase 3: CVNN training notebook (PyTorch)
 ├── lih_comparison.py         # Phase 4: LiH Hamiltonian analysis
 ├── lih_h_tapered_bk.pkl      # Serialized tapered Hamiltonian
 ├── benchmark_results.csv     # Phase 2 fidelity data
@@ -207,13 +286,13 @@ Eidolon/
 
 ## 🎯 Research Roadmap
 
-| Phase | Status | Objective |
-|-------|--------|-----------|
-| **1** | ✅ Complete | Quantum Teleportation Visualization |
-| **2** | ✅ Complete | Hardware Topology Benchmarking |
-| **3** | ✅ Complete | CVNN Oracle Training (0.999 Fidelity) |
-| **4** | 🔄 Active | Molecular Hamiltonian Extraction |
-| **5** | 📋 Planned | VQE with Tapered Hamiltonians |
+| Phase | Status | Objective | Key Result |
+|:-----:|--------|-----------|------------|
+| **1** | ✅ Complete | Quantum Teleportation Visualization | Live Streamlit demo |
+| **2** | ✅ Complete | Hardware Topology Benchmarking | 98% fidelity, 0 SWAPs |
+| **3** | ✅ Complete | CVNN Oracle Training (PyTorch) | **0.999 Fidelity** (5× over baseline) |
+| **4** | 🔄 Active | Molecular Hamiltonian Extraction | 16× dimension reduction |
+| **5** | 📋 Planned | VQE with Tapered Hamiltonians | — |
 
 ---
 
@@ -228,7 +307,7 @@ Eidolon/
 
 <p align="center">
   <em>Developed for Research</em><br/>
-  <strong>Ikshwaku Tiwari • 2026</strong>
+  <strong>Ikshwaku Tiwari • 2026</strong><br/><br/>
+  <img src="https://img.shields.io/badge/Status-Phase%204%20Active-blue?style=flat-square" alt="Status"/>
+  <img src="https://img.shields.io/badge/Code-Private%20During%20Optimization-lightgrey?style=flat-square" alt="Code Status"/>
 </p>
-
-Status: Researching Phase 4 & 5. Code private during optimization.
