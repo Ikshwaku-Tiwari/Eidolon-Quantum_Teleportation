@@ -311,7 +311,6 @@ To isolate the effect of complex arithmetic from raw model capacity, a **FairRVN
 3. **2× parameter efficiency** — CVNN achieves comparable fidelity with ~51% of the RVNN's parameters
 4. **Lower training variance** — CVNN converges to tighter fidelity distributions across random seeds
 
-📖 **Read More:** [*The Journey of a Complex Luthier*](https://medium.com/@it.2602.trans/the-journey-of-a-complex-luthier-9d04226d7cf0) — Towards Data Science
 
 ---
 
